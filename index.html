@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>線上配對對戰系統</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #output {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>線上配對對戰系統</h1>
+        <div class="form-group">
+            <label for="username">用戶名</label>
+            <input type="text" id="username" placeholder="輸入用戶名">
+        </div>
+        <div class="form-group">
+            <label for="password">密碼</label>
+            <input type="password" id="password" placeholder="輸入密碼">
+        </div>
+        <button onclick="register()">註冊</button>
+        <button onclick="login()">登入</button>
+        <button onclick="joinQueue()">加入配對隊列</button>
+        <button onclick="startMatchmaking()">開始配對</button>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const socket = io("http://127.0.0.1:5000");
+        let currentUser = null;
+
+        function log(message) {
+            const output = document.getElementById("output");
+            output.innerHTML += `<p>${message}</p>`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function register() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            fetch("http://127.0.0.1:5000/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            })
+                .then(response => response.json())
+                .then(data => log(data.message || data.error));
+        }
+
+        function login() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            fetch("http://127.0.0.1:5000/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        currentUser = username;
+                        log(data.message);
+                    } else {
+                        log(data.error);
+                    }
+                });
+        }
+
+        function joinQueue() {
+            if (!currentUser) {
+                log("請先登入");
+                return;
+            }
+            socket.emit("join_queue", { username: currentUser });
+        }
+
+        function startMatchmaking() {
+            socket.emit("start_matchmaking");
+        }
+
+        socket.on("queue_status", data => log(data.message));
+        socket.on("game_result", data => {
+            log(`${data.player1}(${data.restaurant1}) ${data.result1} vs ${data.player2}(${data.restaurant2}) ${data.result2}`);
+        });
+    </script>
+</body>
+</html>
