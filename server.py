@@ -76,7 +76,9 @@ def join_queue(data):
                             {
                                 "message": f"{player1.username} 與 {player2.username} 配對成功",
                                 "player1": player1.username,
+                                "player1_gender": player1.gender,
                                 "player2": player2.username,
+                                "player2_gender": player2.gender,
                             }
                         )
 
@@ -85,32 +87,25 @@ def join_queue(data):
     else:
         emit('error', {"error": "玩家不存在或你已經正在配對中"}, broadcast=True)
 
-
 @app.route('/restaurant/random', methods=['GET'])
 def random_restaurant():
-    restaurants = server["restaurants"]._inorder_traversal(server["restaurants"].root)
+    restaurants = server["restaurants"].get_all_restaurants()
     if not restaurants:
         return jsonify({"error": "沒有餐廳資料"}), 404
-    random_rest = random.choice(restaurants)
-    return jsonify({"name": random_rest.name, "rating": random_rest.rating}), 200
+    try:
+        random_rest = random.choice(restaurants)
+        return jsonify({"name": random_rest.name, "rating": random_rest.rating}), 200
+    except IndexError:
+        return jsonify({"error": "沒有餐廳資料"}), 404
 
 
 @app.route('/restaurant/list', methods=['GET'])
 def list_restaurants():
-    restaurants = server["restaurants"]._inorder_traversal(server["restaurants"].root)
+    restaurants = server["restaurants"].get_all_restaurants()
     if not restaurants:
         return jsonify([]), 200
     restaurant_data = [{"name": r.name, "rating": r.rating} for r in restaurants]
     return jsonify(restaurant_data), 200
-
-
-@app.route('/restaurant/custom', methods=['POST'])
-def custom_restaurant():
-    data = request.json
-    restaurant_name = data.get("name")
-    if not restaurant_name:
-        return jsonify({"error": "請提供餐廳名稱"}), 400
-    return jsonify({"message": f"已選擇自訂餐廳: {restaurant_name}"}), 200
 
 
 @socketio.on('confirm_ready')
@@ -180,7 +175,7 @@ def start_game(data):
             winning_restaurant = opponent_rest
         else:
             winner = "平手"
-            winning_restaurant = None
+            winning_restaurant = "無"
 
         # Get opponent's Instagram handle
         opponent_instagram = player2.instagram if hasattr(player2, "instagram") else "無資料"
@@ -215,6 +210,7 @@ def start_game(data):
         # Notify the player that we are waiting for the opponent
         emit('waiting_for_opponent', {"message": "等待對手選擇對戰選項..."})
 
+
 @socketio.on('game_result')
 def game_result(data):
     username = data.get("username")  # 發起對戰的玩家
@@ -248,6 +244,7 @@ def rejoin_queue(data):
             emit('error', {"error": "玩家已在配對隊列中"}, to=username)
     else:
         emit('error', {"error": "玩家不存在"}, to=username)
+
 
 @app.route('/history', methods=['GET'])
 def view_history():

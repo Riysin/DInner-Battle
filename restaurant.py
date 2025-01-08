@@ -101,6 +101,10 @@ class RestaurantAVL:
             return []
         return self._inorder_traversal(node.left) + [node] + self._inorder_traversal(node.right)
 
+    # Add this method to the RestaurantAVL class in restaurant.py
+    def get_all_restaurants(self):
+        return self._inorder_traversal(self.root)
+
     def search_by_rating(self, rating):
         return self._search_by_rating(self.root, rating)
 

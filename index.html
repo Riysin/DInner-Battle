@@ -112,6 +112,7 @@
         <div class="form-group" id="restaurant" style="display: none">
             <label for="restaurant-selection">選擇餐廳</label>
             <select id="restaurant-selection" onchange="handleRestaurantSelection()">
+                <option value="">請選擇</option>
                 <option value="random">隨機選擇</option>
                 <option value="list">指定餐廳</option>
                 <option value="custom">自訂輸入</option>
@@ -150,6 +151,7 @@
 <script>
     const socket = io("http://127.0.0.1:5000");
     let currentUser = null;
+    let selectedRestaurant = null;
 
     function log(message) {
         const output = document.getElementById("output");
@@ -208,78 +210,66 @@
         const listDiv = document.getElementById("restaurant-list");
         const customInputDiv = document.getElementById("custom-restaurant-input");
 
+        // 重置區塊顯示
         listDiv.style.display = "none";
         customInputDiv.style.display = "none";
 
         if (selection === "random") {
-            chooseRandomRestaurant();
+            fetch('http://127.0.0.1:5000/restaurant/random')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        log(data.error);
+                    } else {
+                        selectedRestaurant = data.name; // 設定選擇餐廳
+                        log(`隨機選擇餐廳: ${selectedRestaurant} (評分: ${data.rating})`);
+                    }
+                });
         } else if (selection === "list") {
-            listRestaurants();
+            fetch('http://127.0.0.1:5000/restaurant/list')
+                .then(response => response.json())
+                .then(data => {
+                    const restaurantOptions = document.getElementById("restaurant-options");
+                    restaurantOptions.innerHTML = ""; // 清空清單
+
+                    if (data.length === 0) {
+                        log("目前沒有餐廳資料");
+                    } else {
+                        data.forEach(restaurant => {
+                            const li = document.createElement("li");
+                            li.textContent = `${restaurant.name} - 評分: ${restaurant.rating}`;
+                            li.style.cursor = "pointer";
+                            li.onclick = () => {
+                                selectedRestaurant = restaurant.name; // 點選後儲存名稱
+                                log(`您選擇了: ${selectedRestaurant}`);
+                            };
+                            restaurantOptions.appendChild(li);
+                        });
+                        listDiv.style.display = "block";
+                    }
+                });
         } else if (selection === "custom") {
             customInputDiv.style.display = "block";
         }
     }
 
-    function chooseRandomRestaurant() {
-        fetch('http://127.0.0.1:5000/restaurant/random')
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    log(data.error);
-                } else {
-                    log(`隨機選餐廳: ${data.name}, 評分: ${data.rating}`);
-                }
-            });
-    }
-
-    function listRestaurants() {
-        fetch('http://127.0.0.1:5000/restaurant/list')
-            .then(response => response.json())
-            .then(data => {
-                const listDiv = document.getElementById("restaurant-list");
-                const restaurantOptions = document.getElementById("restaurant-options");
-                restaurantOptions.innerHTML = ""; // 清空舊列表
-
-                if (data.length === 0) {
-                    log("目前沒有餐廳資料");
-                } else {
-                    data.forEach(restaurant => {
-                        const li = document.createElement("li");
-                        li.textContent = `${restaurant.name} - 評分: ${restaurant.rating}`;
-                        li.style.cursor = "pointer";
-                        li.onclick = () => selectRestaurant(restaurant.name);
-                        restaurantOptions.appendChild(li);
-                    });
-                    listDiv.style.display = "block";
-                }
-            });
-    }
-
-    function selectRestaurant(name) {
-        log(`您選擇了餐廳: ${name}`);
-        // 如果需要將選擇結果發送到後端，可以在此處發送
-        fetch('http://127.0.0.1:5000/restaurant/custom', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name})
-        })
-            .then(response => response.json())
-            .then(data => log(data.message || data.error));
-    }
-
     function submitCustomRestaurant() {
-        const restaurantName = document.getElementById("custom-restaurant").value;
-        if (restaurantName.trim() === "") {
+        const restaurantName = document.getElementById("custom-restaurant").value.trim();
+        if (restaurantName === "") {
             log("請輸入有效的餐廳名稱");
             return;
         }
-        fetch('http://127.0.0.1:5000/restaurant/custom', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name: restaurantName})
-        })
-            .then(response => response.json())
-            .then(data => log(data.message || data.error));
+        selectedRestaurant = restaurantName; // 設定自訂餐廳
+        log(`自訂餐廳名稱: ${selectedRestaurant}`);
+    }
+
+    function confirmSelection() {
+        if (!selectedRestaurant) {
+            log("請選擇餐廳");
+            return;
+        }
+
+        log(`最終選擇的餐廳: ${selectedRestaurant}`);
     }
 
     function viewHistory() {
@@ -295,7 +285,8 @@
                     <div class="game-record">
                         <h4>Game ${index + 1} (${formattedDate})</h4>
                         <p>出拳: ${record.option1} / ${record.option2}</p>
-                        <p>結果: ${record.result1 === "win" ? "勝" : "敗"} (餐廳: ${record.restaurant1})</p>
+                        <p>結果: ${record.result1 === "win" ? "勝" : "敗"}</p>
+                        <p>獲勝餐廳: ${record.restaurant1}</p>
                         <p>對手: ${record.opponent}</p>
                         <p>對手Instagram: ${record.opponent_instagram || "無資料"}</p>
                     </div>
@@ -322,18 +313,20 @@
     socket.on("queue_status", data => log(data.message));
 
     socket.on("match_ready", data => {
-        const opponent = currentUser === data.player1 ? data.player2 : data.player1;
+        const opponent = currentUser === data.player1 ? `${data.player2} (${data.player2_gender})` : `${data.player1} (${data.player1_gender})`;
         log(`配對成功！對手是 ${opponent}`);
         log("請選擇餐廳和對戰選項");
 
         const submitButton = document.getElementById('battleOptions');
         const restaurant = document.getElementById('restaurant');
         const confirmButton = document.getElementById('confirm');
+        const rematchButton = document.getElementById('rematchButton');
 
         // Show options
         submitButton.style.display = "block";
         restaurant.style.display = "block";
         confirmButton.style.display = "block";
+        rematchButton.style.display = "none";
 
         const restaurantSelection = document.getElementById('restaurant-selection');
         const battleOptions = document.getElementById('battleOptions');
@@ -365,12 +358,13 @@
         log(data.message);
         const opponent = currentUser === data.player1 ? data.player2 : data.player1;
 
-        const restaurantSelection = document.getElementById('restaurant-selection').value;
+        const confirmButton = document.getElementById('confirm');
+        confirmButton.onclick = confirmSelection; // 綁定確認邏輯
 
         socket.emit("start_game", {
             username: currentUser,
             opponent: opponent,
-            rest: restaurantSelection, // Selected restaurant
+            rest: selectedRestaurant, // Selected restaurant
             opt: selectedOption        // Selected battle option
         });
     });
@@ -398,12 +392,6 @@
         document.getElementById("restaurant").style.display = "none";
         document.getElementById("confirm").style.display = "none";
     });
-
-    function rematch() {
-        document.getElementById("rematchButton").style.display = "none";
-        joinQueue();
-        log("已重新加入配對隊列");
-    }
 
     socket.on("error", error => log(`Error: ${error.message}`));
 
