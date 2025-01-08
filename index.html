@@ -317,16 +317,11 @@
         log(`配對成功！對手是 ${opponent}`);
         log("請選擇餐廳和對戰選項");
 
-        const submitButton = document.getElementById('battleOptions');
-        const restaurant = document.getElementById('restaurant');
+        document.getElementById('battleOptions').style.display = 'block';
+        document.getElementById('restaurant').style.display = 'block';
+        document.getElementById('rematchButton').style.display = 'none';
         const confirmButton = document.getElementById('confirm');
-        const rematchButton = document.getElementById('rematchButton');
-
-        // Show options
-        submitButton.style.display = "block";
-        restaurant.style.display = "block";
-        confirmButton.style.display = "block";
-        rematchButton.style.display = "none";
+        confirmButton.style.display = 'block';
 
         const restaurantSelection = document.getElementById('restaurant-selection');
         const battleOptions = document.getElementById('battleOptions');
@@ -391,6 +386,8 @@
         document.getElementById("battleOptions").style.display = "none";
         document.getElementById("restaurant").style.display = "none";
         document.getElementById("confirm").style.display = "none";
+        document.getElementById("custom-restaurant-input").style.display = "none";
+        document.getElementById("restaurant-list").style.display = "none";
     });
 
     socket.on("error", error => log(`Error: ${error.message}`));

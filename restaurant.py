@@ -6,16 +6,16 @@ class RestaurantNode:
         self.rating = self.calculate_rating(stars, comment_nums)
         self.left = None        
         self.right = None     
-        self.height = 1 
+        self.height = 1
     
     def calculate_rating(self, stars, comment_nums):
         if comment_nums == 0:
             return 3.0
 
-        weighted_score = (stars - 3.0) * (comment_nums / 1000)  # 控制評論數量對評分的影響
+        weighted_score = (stars - 3.0) * (comment_nums / 1500)  # 控制評論數量對評分的影響
         rating = 3 + math.tanh(weighted_score) * 2  # 使用 tanh 函數調整評分範圍
 
-        return round(max(1, min(5, rating)), 2)
+        return round(max(1, min(5, rating)), 3)
 
 
 class RestaurantAVL:

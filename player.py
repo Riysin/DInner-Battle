@@ -8,8 +8,8 @@ class PlayerNode:
 
 class Node:
     def __init__(self):
-        self.keys = []  # 儲存節點的鍵
-        self.children = []  # 儲存子節點
+        self.keys = []  # 儲存節點的鍵 (PlayerNode 資料)
+        self.children = []  # 儲存子節點 (2-3-4 樹的結構)
         self.is_leaf = True  # 判斷是否為葉子節點
 
 class PlayerTree:
@@ -20,6 +20,12 @@ class PlayerTree:
         if self.find_player(username):
             return False  # 玩家已註冊
         player = PlayerNode(username, password, instagram, gender)
+        if len(self.root.keys) == 3:  # 根節點已滿，進行分裂
+            new_root = Node()
+            new_root.is_leaf = False
+            new_root.children.append(self.root)
+            self._split_child(new_root, 0)
+            self.root = new_root
         self._insert(self.root, player)
         return True
 
@@ -84,3 +90,38 @@ class PlayerTree:
         parent.keys.insert(index, mid_key)
         parent.children[index] = left_child
         parent.children.insert(index + 1, right_child)
+
+    def print_tree(self):
+        self._print_node(self.root, 0)
+
+    def _print_node(self, node, level):
+        print("  " * level + str([key.username for key in node.keys]))
+        if not node.is_leaf:
+            for child in node.children:
+                self._print_node(child, level + 1)
+
+def test():
+    tree = PlayerTree()
+    tree.register_player("alice", "password1", "@alice", "F")
+    tree.print_tree()
+    print()
+    tree.register_player("bob", "password2", "@bob", "M")
+    tree.print_tree()
+    print()
+    tree.register_player("charlie", "password3", "@charlie", "M")
+    tree.print_tree()
+    print()
+    tree.register_player("david", "password4", "@david", "M")
+    tree.print_tree()
+    print()
+    tree.register_player("eve", "password5", "@eve", "F")
+    tree.print_tree()
+    print()
+    tree.register_player("aaa", "password6", "@aaa", "M")
+    tree.print_tree()
+    print()
+    tree.register_player("bbb", "password7", "@bbb", "F")
+    tree.print_tree()
+    print()
+    tree.register_player("ccc", "password8", "@ccc", "F")
+    tree.print_tree()
