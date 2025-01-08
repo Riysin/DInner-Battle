@@ -152,6 +152,7 @@
     const socket = io("http://127.0.0.1:5000");
     let currentUser = null;
     let selectedRestaurant = null;
+    let selectedOption = null;
 
     function log(message) {
         const output = document.getElementById("output");
@@ -272,6 +273,17 @@
         log(`最終選擇的餐廳: ${selectedRestaurant}`);
     }
 
+    function chooseOption(option) {
+        selectedOption = option;
+        log(`您選擇了 ${option}`);
+    }
+
+    function rematch() {
+        document.getElementById("battleOptions").style.display = "none";
+        joinQueue();
+        log("已重新加入配對隊列");
+    }
+
     function viewHistory() {
         fetch("http://127.0.0.1:5000/history")
             .then(response => response.json())
@@ -296,20 +308,6 @@
             .catch(error => console.error("Error fetching history:", error));
     }
 
-
-    let selectedOption = null;
-
-    function chooseOption(option) {
-        selectedOption = option;
-        log(`您選擇了 ${option}`);
-    }
-
-    function rematch() {
-        document.getElementById("battleOptions").style.display = "none";
-        joinQueue();
-        log("已重新加入配對隊列");
-    }
-
     socket.on("queue_status", data => log(data.message));
 
     socket.on("match_ready", data => {
@@ -326,16 +324,13 @@
         const restaurantSelection = document.getElementById('restaurant-selection');
         const battleOptions = document.getElementById('battleOptions');
 
-        // Save selected battle option
         window.chooseOption = function (option) {
             selectedOption = option;
             log(`已選擇: ${option}`);
         };
 
-        // Handle confirm button click
         confirmButton.onclick = function () {
             if (restaurantSelection.value && battleOptions) {
-                // Send confirmation to the server
                 socket.emit("confirm_ready", {
                     player1: data.player1,
                     player2: data.player2,
@@ -359,8 +354,8 @@
         socket.emit("start_game", {
             username: currentUser,
             opponent: opponent,
-            rest: selectedRestaurant, // Selected restaurant
-            opt: selectedOption        // Selected battle option
+            rest: selectedRestaurant,
+            opt: selectedOption
         });
     });
 
